@@ -1,15 +1,20 @@
 CC := gcc
-CFLAGS := -fopenmp -O2
+MPICC := mpicc
+CFLAGS := -fopenmp -O2 -Wno-unused-result
 LDFLAGS := -lm
 
-EXES := 1-openmp
+OMPEXES := 1-openmp
+MPIEXES := 1-mpi
 
 .PHONY: all clean
 
-all: $(EXES)
+all: $(OMPEXES) $(MPIEXES)
 
-$(EXES): %: %.c
+$(OMPEXES): %: %.c
 	${CC} ${CFLAGS} -o $@ $^ ${LDFLAGS}
 
+$(MPIEXES): %: %.c
+	${MPICC} ${CFLAGS} -o $@ $^ ${LDFLAGS}
+
 clean:
-	rm -f $(EXES)
+	rm -f $(OMPEXES) $(MPIEXES)
