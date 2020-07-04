@@ -1,6 +1,6 @@
 CC := gcc
 MPICC := mpicc
-CFLAGS := -fopenmp -O2 -Wno-unused-result
+CFLAGS := -O2 -Wno-unused-result
 LDFLAGS := -lm
 
 OMPEXES := 1-openmp 2-openmp
@@ -11,7 +11,7 @@ MPIEXES := 1-mpi 2-mpi
 all: $(OMPEXES) $(MPIEXES)
 
 $(OMPEXES): %: %.c
-	${CC} ${CFLAGS} -o $@ $^ ${LDFLAGS}
+	${CC} ${CFLAGS} -fopenmp -o $@ $^ ${LDFLAGS}
 
 $(MPIEXES): %: %.c
 	${MPICC} ${CFLAGS} -o $@ $^ ${LDFLAGS}
