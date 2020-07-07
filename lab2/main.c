@@ -36,7 +36,6 @@ int main(int argc, char **argv) {
 
     if (rank == 0) {
         scanf(" %u %u", &n, &rounds);
-        n += 1;
     }
     MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&rounds, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -71,7 +70,7 @@ int main(int argc, char **argv) {
             } else if (car[i].v < V_MAX) {
                 car[i].v++;
             }
-            if (rand() <= p_cap && car[i].v > 0) {
+            if (car[i].v > 0 && rand() <= p_cap) {
                 car[i].v--;
             }
         }
@@ -83,10 +82,10 @@ int main(int argc, char **argv) {
 
         // Communicate
         if (rank != size - 1) {
-            MPI_Send(&car[0].v, 1, MPI_INT, rank + 1, rank, MPI_COMM_WORLD);
+            MPI_Send(&car[this_size - 1].v, 1, MPI_INT, rank + 1, rank, MPI_COMM_WORLD);
         }
         if (rank != 0) {
-            unsigned that_v; // car[-1].v
+            int that_v; // car[-1].v
             MPI_Status status;
             MPI_Recv(&that_v, 1, MPI_INT, rank - 1, rank - 1, MPI_COMM_WORLD, &status);
             car[0].d += that_v - car[0].v;
@@ -94,33 +93,33 @@ int main(int argc, char **argv) {
     }
 
     // Collect results
-    int *these_sizes = NULL;
-    unsigned *indexes = NULL;
+    int *recvcounts = NULL;
+    int *displs = NULL;
     Car *cars = NULL;
     if (rank == 0) {
-        these_sizes = malloc(size * sizeof(*these_sizes));
-        indexes = malloc(size * sizeof(*indexes));
+        recvcounts = malloc(size * sizeof(*recvcounts));
+        displs = malloc(size * sizeof(*displs));
         cars = malloc(n * sizeof(*cars));
     }
-    MPI_Gather(&this_size, 1, MPI_INT, these_sizes, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Gather(&this_size, 1, MPI_INT, recvcounts, 1, MPI_INT, 0, MPI_COMM_WORLD);
     // Produce indexes for variable-gathering
     if (rank == 0) {
-        indexes[0] = 0;
+        displs[0] = 0;
         for (size_t i = 1; i < size; i++) {
-            indexes[i] = 1 + indexes[i - 1] + these_sizes[i - 1];
+            displs[i] = displs[i - 1] + recvcounts[i - 1];
         }
     }
-    MPI_Gatherv(car, this_size, MPI_Car, cars, these_sizes, indexes, MPI_Car, 0, MPI_COMM_WORLD);
+    MPI_Gatherv(car, this_size, MPI_Car, cars, recvcounts, displs, MPI_Car, 0, MPI_COMM_WORLD);
     MPI_Type_free(&MPI_Car);
     MPI_Finalize();
 
     if (rank == 0) {
         printf("Car %3d: Speed = %3d\n", 0, cars[0].v);
-        for (int i = 1; i < this_size; i++) {
+        for (int i = 1; i < n; i++) {
             printf("Car %3d: Speed = %3d, Distance = %3d\n", i, cars[i].v, cars[i].d);
         }
-        free(these_sizes);
-        free(indexes);
+        free(recvcounts);
+        free(displs);
         free(cars);
     }
     return 0;
