@@ -51,10 +51,12 @@ int main(int argc, char **argv) {
         MPI_Type_commit(&MPI_Car);
     }
 
-    int this_size = n * (rank + 1) / size - n * rank / size;
+    const int this_start = n * rank / size;
+    int this_size = n * (rank + 1) / size - this_start;
     Car *car = malloc(this_size * sizeof(Car));
     for (int i = 0; i < this_size; i++) {
-        car[i].v = car[i].d = 0U;
+        car[i].v = 0;
+        car[i].d = 1;
     }
     if (rank == 0) {
         car[0].d = V_MAX + 1;
@@ -64,7 +66,7 @@ int main(int argc, char **argv) {
     for (int round = 0; round < rounds; round++) {
         // Speed change
         for (int i = 0; i < this_size; i++) {
-            if (car[i].d <= car[i].v) {
+            if (car[i].d - 1 <= car[i].v) {
                 car[i].v = car[i].d - 1;
             } else if (car[i].v < V_MAX) {
                 car[i].v++;
