@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
     if (rank == 0) {
-        scanf(" %u", &n);
+        scanf(" %d", &n);
         scanf(" %lf", &duration);
 
         // Make sure N is a square number

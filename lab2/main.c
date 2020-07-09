@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
     init_random();
 
     if (rank == 0) {
-        scanf(" %u %u", &n, &rounds);
+        scanf(" %d %d", &n, &rounds);
     }
     MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&rounds, 1, MPI_INT, 0, MPI_COMM_WORLD);
