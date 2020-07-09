@@ -73,8 +73,16 @@ int main(int argc, char **argv) {
     }
     MPI_Bcast(&side, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&duration, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    const int this_start = n * rank / size;
-    const int this_size = n * (rank + 1) / size - this_start;
+
+    // Prepare parameters
+    int *recvcounts = malloc(n * sizeof(int)), *displs = malloc((n + 1) * sizeof(int));
+    displs[0] = 0;
+    for (int i = 0; i < n; i++) {
+        displs[i + 1] = n * (i + 1) / size;
+        recvcounts[i] = displs[i + 1] - displs[i];
+    }
+    const int this_start = displs[rank];
+    const int this_size = recvcounts[rank];
 
     // Construct datatype
     MPI_Datatype MPI_Pos;
@@ -111,15 +119,10 @@ int main(int argc, char **argv) {
         runtime += FRAME;
 
         // Communicate
-        //MPI_Allgather(MPI_IN_PLACE, this_size, MPI_Pos, pos, this_size, MPI_Pos, MPI_COMM_WORLD);
-        for (int i = 0; i < size; i++) {
-            MPI_Bcast(pos + (n * i / size),
-                      (n * (i + 1) / size) - (n * i / size),
-                      MPI_Pos, i, MPI_COMM_WORLD);
-        }
+        MPI_Allgatherv(MPI_IN_PLACE, this_size, MPI_Pos, pos, recvcounts, displs, MPI_Pos, MPI_COMM_WORLD);
     }
 
-    // Results already collected from broadcast, cleanup only
+    // Results already collected from allgatherv, so cleanup only
     MPI_Type_free(&MPI_Pos);
     MPI_Finalize();
 
