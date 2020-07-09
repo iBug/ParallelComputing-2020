@@ -104,11 +104,14 @@ int main(int argc, char **argv) {
         for (int i = 0; i < this_size; i++) {
             compute_force(pos, n, this_start + i, &force);
             compute_velocity(&vel[i], &force);
-            compute_position(&pos[i], &vel[i]);
+        }
+        for (int i = 0; i < this_size; i++) {
+            compute_position(&pos[this_start + i], &vel[i]);
         }
         runtime += FRAME;
 
         // Communicate
+        //MPI_Allgather(MPI_IN_PLACE, this_size, MPI_Pos, pos, this_size, MPI_Pos, MPI_COMM_WORLD);
         for (int i = 0; i < size; i++) {
             MPI_Bcast(pos + (n * i / size),
                       (n * (i + 1) / size) - (n * i / size),
