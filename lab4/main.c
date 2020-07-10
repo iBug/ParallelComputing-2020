@@ -125,7 +125,8 @@ int main(int argc, char **argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
     // Load data
-    int *root_data = NULL, *root_samples = NULL;
+    int *root_data = NULL, *root_samples = NULL,
+        *block_sizes = NULL, *displs = NULL;
     if (rank == 0) {
         scanf(" %d", &n);
         root_data = malloc(n * sizeof(int));
@@ -137,14 +138,17 @@ int main(int argc, char **argv) {
     MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     // Prepare parameters
-    int *block_sizes = malloc(n * sizeof(int)), *displs = malloc((n + 1) * sizeof(int));
-    displs[0] = 0;
-    for (int i = 0; i < n; i++) {
-        displs[i + 1] = n * (i + 1) / size;
-        block_sizes[i] = displs[i + 1] - displs[i];
+    if (rank == 0) {
+        block_sizes = malloc(n * sizeof(int));
+        displs = malloc((n + 1) * sizeof(int));
+        displs[0] = 0;
+        for (int i = 0; i < n; i++) {
+            displs[i + 1] = n * (i + 1) / size;
+            block_sizes[i] = displs[i + 1] - displs[i];
+        }
     }
-    const int this_start = displs[rank];
-    const int this_size = block_sizes[rank];
+    int this_start = n * rank / size;;
+    int this_size = n * (rank + 1) / size - this_start;
     int *this_data = malloc(this_size * sizeof(int));
 
     // Dispatch first batch of jobs
@@ -161,7 +165,8 @@ int main(int argc, char **argv) {
     MPI_Gather(samples, size, MPI_INT, root_samples, size * size, MPI_INT, 0, MPI_COMM_WORLD);
     free(samples);
 
-    int *pivots = malloc((size - 1) * sizeof(int));
+    // Merge samples and select pivots
+    int *pivots = malloc(size * sizeof(int));
     if (rank == 0) {
         multi_merge_flat(root_samples, size, size);
         for (int i = 0; i < size - 1; i++) {
@@ -171,21 +176,70 @@ int main(int argc, char **argv) {
     MPI_Bcast(pivots, size - 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     // Partition by pivots
+    int *class_index = malloc((size + 1) * sizeof(int)),
+        *rclass_index = malloc((size + 1) * sizeof(int)),
+        *class_sizes = malloc(size * sizeof(int)),
+        *rclass_sizes = malloc(size * sizeof(int));
+    class_index[0] = rclass_index[0] = 0;
+    class_index[size] = this_size;
+    for (int i = 0, class_i = 1; i < this_size && class_i < size; i++) {
+        while (this_data[i] >= pivots[class_i - 1]) {
+            class_index[class_i++] = i;
+        }
+    }
+    for (int i = 0; i < size; i++) {
+        class_sizes[i] = class_index[i + 1] - class_index[i];
+    }
+    MPI_Alltoall(class_sizes, size, MPI_INT, rclass_sizes, size, MPI_INT, MPI_COMM_WORLD);
+    free(pivots);
+    pivots = NULL;
+
+    // Exchange classes of data
+    for (int i = 0; i < size; i++) {
+        rclass_index[i + 1] = rclass_index[i] + rclass_sizes[i];
+    }
+    if (this_size < rclass_index[size]) {
+        this_data = realloc(this_data, rclass_index[size] * sizeof(int));
+    }
+    MPI_Alltoallv(MPI_IN_PLACE, class_sizes, class_index, MPI_INT,
+                  this_data, rclass_index, rclass_sizes, MPI_INT, MPI_COMM_WORLD);
+    free(class_index);
+    free(class_sizes);
+    class_index = rclass_index;
+    class_sizes = rclass_sizes;
+    rclass_index = rclass_sizes = NULL;
+
+    // Adjust the local array (optional)
+    if (this_size > class_index[size]) {
+        this_data = realloc(this_data, class_index[size] * sizeof(int));
+    }
+    this_size = class_index[size];
+
+    // Merge and gather
+    multi_merge(this_data, size, class_sizes);
+    MPI_Gather(&this_size, 1, MPI_INT, block_sizes, size, MPI_INT, 0, MPI_COMM_WORLD);
+    if (rank == 0) {
+        displs[0] = 0;
+        for (int i = 1; i < size; i++) {
+            displs[i] = displs[i - 1] + block_sizes[i - 1];
+        }
+    }
+    MPI_Gatherv(this_data, this_size, MPI_INT, root_data, block_sizes, displs, MPI_INT, 0, MPI_COMM_WORLD);
+    free(class_index);
+    free(class_sizes);
+    free(this_data);
 
     MPI_Finalize();
-    free(block_sizes);
-    free(displs);
-    free(this_data);
-    free(pivots);
 
     if (rank == 0) {
-        printf("%d", root_data[0]);
-        for (int i = 1; i < n; i++) {
-            printf(" %d", root_data[i]);
+        for (int i = 0; i < n; i++) {
+            printf("%d\n", root_data[i]);
         }
         printf("\n");
         free(root_data);
         free(root_samples);
+        free(block_sizes);
+        free(displs);
     }
     return 0;
 }
