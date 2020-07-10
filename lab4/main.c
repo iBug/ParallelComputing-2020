@@ -203,7 +203,6 @@ int main(int argc, char **argv) {
     class_index[mpi_size] = this_size;
     for (int i = 0, class_i = 1; i < this_size && class_i < mpi_size; i++) {
         while (this_data[i] >= pivots[class_i - 1]) {
-            fprintf(stderr, "this_data[%d] = %d > pivots[%d] = %d\n", i, this_data[i], class_i - 1, pivots[class_i - 1]);
             class_index[class_i] = i;
             class_i++;
             if (class_i >= mpi_size)
@@ -232,7 +231,7 @@ int main(int argc, char **argv) {
     for (int i = 0; i < mpi_size; i++) {
         rclass_index[i + 1] = rclass_index[i] + rclass_sizes[i];
     }
-    fprintf(stderr, "Receive size: %d\n", rclass_index[mpi_size]);
+    fprintf(stderr, "Receive size [%d]: %d\n", mpi_rank, rclass_index[mpi_size]);
     int *rdata = malloc(rclass_index[mpi_size] * sizeof(int));
     MPI_Alltoallv(this_data, class_sizes, class_index, MPI_INT,
                   rdata, rclass_sizes, rclass_index, MPI_INT, MPI_COMM_WORLD);

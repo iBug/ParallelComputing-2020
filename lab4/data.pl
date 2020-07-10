@@ -21,4 +21,4 @@ sub random {
 }
 
 say $n;
-say random $max for 2 .. $n;
+say random $max for 1 .. $n;
