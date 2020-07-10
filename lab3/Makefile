@@ -1,6 +1,6 @@
 CC := gcc
 MPICC := mpicc
-CFLAGS := -fopenmp -O2 -Wall -Wno-unused-result
+CFLAGS := -O2 -Wall -Wno-unused-result
 LDFLAGS := -lm
 EXES := main
 
