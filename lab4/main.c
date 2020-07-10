@@ -4,8 +4,8 @@
 #include <math.h>
 #include <mpi.h>
 
-#define HLEFT(index) (2 * ((index) + 1))
-#define HRIGHT(index) (2 * ((index) + 2))
+#define HLEFT(index) (2 * (index) + 1)
+#define HRIGHT(index) (2 * (index) + 2)
 
 void qsort_recurse(int *a, int n) {
     if (n <= 5)
@@ -48,7 +48,7 @@ void multi_merge(int *data, int k, const int *sizes) {
     int *index = malloc((k + 1) * sizeof(int)); // Start index of each "way"
     int *ptr = malloc(k * sizeof(int));         // Current index in each "way"
     int *heap = malloc(k * sizeof(int));
-    int heapsize = k; // If a way has been merged completely we need to decrement heap size
+    int heapsize; // If a way has been merged completely we need to decrement heap size
     index[0] = 0;
     for (int i = 0; i < k; i++) {
         ptr[i] = index[i];
@@ -56,25 +56,41 @@ void multi_merge(int *data, int k, const int *sizes) {
         heap[i] = i;
     }
 
+    // Precautionary cleanup for sizes[i] = 0
+    int missing = 0;
+    for (int i = 0; i < k - missing; i++) {
+        if (sizes[i] == 0) {
+            missing++;
+        }
+        heap[i] = heap[i + missing];
+    }
+    heapsize = k - missing;
+    if (heapsize <= 0)
+        return;
+
     // Multi-way merge using heap
     // heap[i] means the "head" element of way i
     // So the actual element is data[ptr[heap[i]]]
-    for (int i = (heapsize - 1) / 2; i > 0; i--) {
-        int smallest = i;
-        if (HLEFT(i) < heapsize && data[ptr[heap[smallest]]] > data[ptr[heap[HLEFT(i)]]]) {
-            smallest = HLEFT(i);
-        }
-        if (HRIGHT(i) < heapsize && data[ptr[heap[smallest]]] > data[ptr[heap[HRIGHT(i)]]]) {
-            smallest = HRIGHT(i);
-        }
-        if (smallest != i) {
-            int t = heap[i];
-            heap[i] = heap[smallest];
+    for (int i = (heapsize - 1) / 2; i >= 0; i--) {
+        int j = i, smallest;
+        while (1) {
+            smallest = j;
+            if (HLEFT(j) < heapsize && data[ptr[heap[smallest]]] > data[ptr[heap[HLEFT(j)]]]) {
+                smallest = HLEFT(j);
+            }
+            if (HRIGHT(j) < heapsize && data[ptr[heap[smallest]]] > data[ptr[heap[HRIGHT(j)]]]) {
+                smallest = HRIGHT(j);
+            }
+            if (smallest == j)
+                break;
+            int t = heap[j];
+            heap[j] = heap[smallest];
             heap[smallest] = t;
+            j = smallest;
         }
     }
     while (1) {
-        list[listsize++] = data[ptr[heap[0]]];;
+        list[listsize++] = data[ptr[heap[0]]];
         ptr[heap[0]]++;
         if (ptr[heap[0]] >= index[heap[0] + 1]) {
             // This "way" reached its end
@@ -83,7 +99,8 @@ void multi_merge(int *data, int k, const int *sizes) {
                 break;
         }
 
-        for (int i = 0, smallest;; i = smallest) {
+        int i = 0, smallest;
+        while (1) {
             smallest = i;
             if (HLEFT(i) < heapsize && data[ptr[heap[smallest]]] > data[ptr[heap[HLEFT(i)]]]) {
                 smallest = HLEFT(i);
@@ -96,6 +113,7 @@ void multi_merge(int *data, int k, const int *sizes) {
             int t = heap[i];
             heap[i] = heap[smallest];
             heap[smallest] = t;
+            i = smallest;
         }
     }
     free(index);
@@ -117,38 +135,38 @@ void multi_merge_flat(int *data, int k, int eachsize) {
 }
 
 int main(int argc, char **argv) {
-    int rank, size; // MPI
+    int mpi_rank, mpi_size; // MPI
     int n;
 
     MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 
     // Load data
     int *root_data = NULL, *root_samples = NULL,
         *block_sizes = NULL, *displs = NULL;
-    if (rank == 0) {
+    if (mpi_rank == 0) {
         scanf(" %d", &n);
         root_data = malloc(n * sizeof(int));
         for (int i = 0; i < n; i++) {
             scanf(" %d", &root_data[i]);
         }
-        root_samples = malloc(size * size * sizeof(int));
+        root_samples = malloc(mpi_size * mpi_size * sizeof(int));
     }
     MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     // Prepare parameters
-    if (rank == 0) {
+    if (mpi_rank == 0) {
         block_sizes = malloc(n * sizeof(int));
         displs = malloc((n + 1) * sizeof(int));
         displs[0] = 0;
         for (int i = 0; i < n; i++) {
-            displs[i + 1] = n * (i + 1) / size;
+            displs[i + 1] = n * (i + 1) / mpi_size;
             block_sizes[i] = displs[i + 1] - displs[i];
         }
     }
-    int this_start = n * rank / size;;
-    int this_size = n * (rank + 1) / size - this_start;
+    int this_start = n * mpi_rank / mpi_size;;
+    int this_size = n * (mpi_rank + 1) / mpi_size - this_start;
     int *this_data = malloc(this_size * sizeof(int));
 
     // Dispatch first batch of jobs
@@ -158,69 +176,82 @@ int main(int argc, char **argv) {
     quick_sort(this_data, this_size);
 
     // Sampling
-    int *samples = malloc(size * sizeof(int));
-    for (int i = 0; i < size; i++) {
-        samples[i] = this_data[this_size * (i + 1) / (size + 1)];
+    int *samples = malloc(mpi_size * sizeof(int));
+    for (int i = 0; i < mpi_size; i++) {
+        samples[i] = this_data[this_size * (i + 1) / (mpi_size + 1)];
     }
-    MPI_Gather(samples, size, MPI_INT, root_samples, size * size, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Gather(samples, mpi_size, MPI_INT, root_samples, mpi_size, MPI_INT, 0, MPI_COMM_WORLD);
     free(samples);
 
     // Merge samples and select pivots
-    int *pivots = malloc(size * sizeof(int));
-    if (rank == 0) {
-        multi_merge_flat(root_samples, size, size);
-        for (int i = 0; i < size - 1; i++) {
-            pivots[i] = root_samples[size * (i + 1)];
+    int *pivots = malloc(mpi_size * sizeof(int));
+    if (mpi_rank == 0) {
+        multi_merge_flat(root_samples, mpi_size, mpi_size);
+        for (int i = 0; i < mpi_size - 1; i++) {
+            pivots[i] = root_samples[mpi_size * (i + 1)];
         }
+        free(root_samples);
     }
-    MPI_Bcast(pivots, size - 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(pivots, mpi_size - 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     // Partition by pivots
-    int *class_index = malloc((size + 1) * sizeof(int)),
-        *rclass_index = malloc((size + 1) * sizeof(int)),
-        *class_sizes = malloc(size * sizeof(int)),
-        *rclass_sizes = malloc(size * sizeof(int));
-    class_index[0] = rclass_index[0] = 0;
-    class_index[size] = this_size;
-    for (int i = 0, class_i = 1; i < this_size && class_i < size; i++) {
+    int *class_index = malloc((mpi_size + 1) * sizeof(int)),
+        *rclass_index = malloc((mpi_size + 1) * sizeof(int)),
+        *class_sizes = malloc(mpi_size * sizeof(int)),
+        *rclass_sizes = malloc(mpi_size * sizeof(int));
+    class_index[0] = 0;
+    class_index[mpi_size] = this_size;
+    for (int i = 0, class_i = 1; i < this_size && class_i < mpi_size; i++) {
         while (this_data[i] >= pivots[class_i - 1]) {
-            class_index[class_i++] = i;
+            fprintf(stderr, "this_data[%d] = %d > pivots[%d] = %d\n", i, this_data[i], class_i - 1, pivots[class_i - 1]);
+            class_index[class_i] = i;
+            class_i++;
+            if (class_i >= mpi_size)
+                break;
         }
     }
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; i < mpi_size; i++) {
         class_sizes[i] = class_index[i + 1] - class_index[i];
     }
-    MPI_Alltoall(class_sizes, size, MPI_INT, rclass_sizes, size, MPI_INT, MPI_COMM_WORLD);
+    MPI_Alltoall(class_sizes, 1, MPI_INT, rclass_sizes, 1, MPI_INT, MPI_COMM_WORLD);
     free(pivots);
     pivots = NULL;
 
+    {
+        char *s = malloc(1024);
+        int idx = sprintf(s, "Class sizes [%d]:", mpi_rank);
+        for (int i = 0; i < mpi_size; i++) {
+            idx += sprintf(s + idx, " %d", class_sizes[i]);
+        }
+        fprintf(stderr, "%s\n", s);
+        free(s);
+    }
+
     // Exchange classes of data
-    for (int i = 0; i < size; i++) {
+    rclass_index[0] = 0;
+    for (int i = 0; i < mpi_size; i++) {
         rclass_index[i + 1] = rclass_index[i] + rclass_sizes[i];
     }
-    if (this_size < rclass_index[size]) {
-        this_data = realloc(this_data, rclass_index[size] * sizeof(int));
-    }
-    MPI_Alltoallv(MPI_IN_PLACE, class_sizes, class_index, MPI_INT,
-                  this_data, rclass_index, rclass_sizes, MPI_INT, MPI_COMM_WORLD);
+    fprintf(stderr, "Receive size: %d\n", rclass_index[mpi_size]);
+    int *rdata = malloc(rclass_index[mpi_size] * sizeof(int));
+    MPI_Alltoallv(this_data, class_sizes, class_index, MPI_INT,
+                  rdata, rclass_sizes, rclass_index, MPI_INT, MPI_COMM_WORLD);
+    free(this_data);
     free(class_index);
     free(class_sizes);
+    this_data = rdata;
+    this_size = rclass_index[mpi_size];
     class_index = rclass_index;
     class_sizes = rclass_sizes;
-    rclass_index = rclass_sizes = NULL;
-
-    // Adjust the local array (optional)
-    if (this_size > class_index[size]) {
-        this_data = realloc(this_data, class_index[size] * sizeof(int));
-    }
-    this_size = class_index[size];
+    rdata = rclass_index = rclass_sizes = NULL;
 
     // Merge and gather
-    multi_merge(this_data, size, class_sizes);
-    MPI_Gather(&this_size, 1, MPI_INT, block_sizes, size, MPI_INT, 0, MPI_COMM_WORLD);
-    if (rank == 0) {
+    fprintf(stderr, "Total size [%d]: %d\n", mpi_rank, this_size);
+    multi_merge(this_data, mpi_size, class_sizes);
+    MPI_Gather(&this_size, 1, MPI_INT, block_sizes, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    if (mpi_rank == 0) {
         displs[0] = 0;
-        for (int i = 1; i < size; i++) {
+        for (int i = 1; i < mpi_size; i++) {
             displs[i] = displs[i - 1] + block_sizes[i - 1];
         }
     }
@@ -231,13 +262,11 @@ int main(int argc, char **argv) {
 
     MPI_Finalize();
 
-    if (rank == 0) {
+    if (mpi_rank == 0) {
         for (int i = 0; i < n; i++) {
             printf("%d\n", root_data[i]);
         }
-        printf("\n");
         free(root_data);
-        free(root_samples);
         free(block_sizes);
         free(displs);
     }
