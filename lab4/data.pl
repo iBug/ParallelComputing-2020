@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 
+use v5.10;
 use strict;
 
 die "Need an argument\n" unless @ARGV > 0;
@@ -19,7 +20,5 @@ sub random {
     return int rand $_[0];
 }
 
-print "$n\n";
-print random $max;
-print ' ' . random $max for 2 .. $n;
-print "\n";
+say $n;
+say random $max for 2 .. $n;
