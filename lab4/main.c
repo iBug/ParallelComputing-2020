@@ -216,22 +216,11 @@ int main(int argc, char **argv) {
     free(pivots);
     pivots = NULL;
 
-    {
-        char *s = malloc(1024);
-        int idx = sprintf(s, "Class sizes [%d]:", mpi_rank);
-        for (int i = 0; i < mpi_size; i++) {
-            idx += sprintf(s + idx, " %d", class_sizes[i]);
-        }
-        fprintf(stderr, "%s\n", s);
-        free(s);
-    }
-
     // Exchange classes of data
     rclass_index[0] = 0;
     for (int i = 0; i < mpi_size; i++) {
         rclass_index[i + 1] = rclass_index[i] + rclass_sizes[i];
     }
-    fprintf(stderr, "Receive size [%d]: %d\n", mpi_rank, rclass_index[mpi_size]);
     int *rdata = malloc(rclass_index[mpi_size] * sizeof(int));
     MPI_Alltoallv(this_data, class_sizes, class_index, MPI_INT,
                   rdata, rclass_sizes, rclass_index, MPI_INT, MPI_COMM_WORLD);
@@ -245,7 +234,6 @@ int main(int argc, char **argv) {
     rdata = rclass_index = rclass_sizes = NULL;
 
     // Merge and gather
-    fprintf(stderr, "Total size [%d]: %d\n", mpi_rank, this_size);
     multi_merge(this_data, mpi_size, class_sizes);
     MPI_Gather(&this_size, 1, MPI_INT, block_sizes, 1, MPI_INT, 0, MPI_COMM_WORLD);
     if (mpi_rank == 0) {

@@ -1,6 +1,6 @@
 CC := gcc
 MPICC := mpicc
-CFLAGS := -O2 -Wall -Wno-unused-result -fsanitize=address -g
+CFLAGS := -O2 -Wall -Wno-unused-result
 LDFLAGS := -lm
 EXES := main
 
