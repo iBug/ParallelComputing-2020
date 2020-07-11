@@ -20,7 +20,6 @@ int main(int argc, char **argv) {
     }
     MPI_Bcast(&n, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
 
-    double step = 1.0 / n;
     for (unsigned i = rank; i < n; i += size) {
         double x = (i + 0.5) / n;
         sum += 4.0 / (1.0 + x * x);
