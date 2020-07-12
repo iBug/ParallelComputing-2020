@@ -34,12 +34,6 @@ int main(int argc, char **argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     init_random();
 
-    if (rank == 0) {
-        scanf(" %d %d", &n, &rounds);
-    }
-    MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&rounds, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
     // Construct datatype
     MPI_Datatype MPI_Car;
     {
@@ -49,6 +43,13 @@ int main(int argc, char **argv) {
         MPI_Type_create_struct(2, blocklengths, offsets, types, &MPI_Car);
         MPI_Type_commit(&MPI_Car);
     }
+
+    if (rank == 0) {
+        scanf(" %d %d", &n, &rounds);
+    }
+    const double starttime = MPI_Wtime();
+    MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&rounds, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     const int this_start = n * rank / size;
     int this_size = n * (rank + 1) / size - this_start;
@@ -111,6 +112,7 @@ int main(int argc, char **argv) {
     }
     MPI_Gatherv(car, this_size, MPI_Car, cars, recvcounts, displs, MPI_Car, 0, MPI_COMM_WORLD);
     MPI_Type_free(&MPI_Car);
+    const double endtime = MPI_Wtime();
     MPI_Finalize();
 
     if (rank == 0) {
@@ -121,6 +123,12 @@ int main(int argc, char **argv) {
         free(recvcounts);
         free(displs);
         free(cars);
+        const char *log_time_file = getenv("LOG_TIME_FILE");
+        if (log_time_file != NULL) {
+            FILE *fp = fopen(log_time_file, "a");
+            fprintf(fp, "%lf\n", endtime - starttime);
+            fclose(fp);
+        }
     }
     return 0;
 }
