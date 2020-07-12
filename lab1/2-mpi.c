@@ -18,6 +18,7 @@ int main(int argc, char **argv) {
         scanf(" %u", &n);
         n += 1;
     }
+    const double starttime = MPI_Wtime();
     MPI_Bcast(&n, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
 
     for (unsigned i = rank; i < n; i += size) {
@@ -27,10 +28,17 @@ int main(int argc, char **argv) {
     double total;
     MPI_Reduce(&sum, &total, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     total /= n;
+    const double endtime = MPI_Wtime();
+    MPI_Finalize();
 
     if (rank == 0) {
         printf("%.12lf\n", total);
+        const char *log_time_file = getenv("LOG_TIME_FILE");
+        if (log_time_file != NULL) {
+            FILE *fp = fopen(log_time_file, "a");
+            fprintf(fp, "%lf\n", endtime - starttime);
+            fclose(fp);
+        }
     }
-    MPI_Finalize();
     return 0;
 }

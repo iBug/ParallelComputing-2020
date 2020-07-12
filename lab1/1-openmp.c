@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <math.h>
+#include <omp.h>
 
 #define N_MAX 4294967296ULL
 
@@ -16,6 +17,7 @@ int main(void) {
         // Wrong N
         return 1;
     }
+    const double starttime = omp_get_wtime();
     byte *prime = malloc(n * sizeof(byte));
 
     uint64_t sqrt_n = (uint64_t)ceil(sqrt(n));
@@ -37,6 +39,13 @@ int main(void) {
     }
 
     free(prime);
+    const double endtime = omp_get_wtime();
     printf("%zd\n", count);
+    const char *log_time_file = getenv("LOG_TIME_FILE");
+    if (log_time_file != NULL) {
+        FILE *fp = fopen(log_time_file, "a");
+        fprintf(fp, "%lf\n", endtime - starttime);
+        fclose(fp);
+    }
     return 0;
 }

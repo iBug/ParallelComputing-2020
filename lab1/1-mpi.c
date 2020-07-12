@@ -19,7 +19,9 @@ int main(int argc, char **argv) {
     }
     if (n < size * size) {
         fprintf(stderr, "Unexpected number %u, need at least %d for %d processes.\n", n, size * size, size);
+        MPI_Abort(MPI_COMM_WORLD, 1);
     }
+    const double starttime = MPI_Wtime();
     MPI_Bcast(&n, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
 
     unsigned start, end, length;
@@ -57,9 +59,17 @@ int main(int argc, char **argv) {
     free(prime);
 
     MPI_Reduce(&cnt, &total, 1, MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD);
+    const double endtime = MPI_Wtime();
+    MPI_Finalize();
+
     if (rank == 0) {
         printf("%u\n", total);
+        const char *log_time_file = getenv("LOG_TIME_FILE");
+        if (log_time_file != NULL) {
+            FILE *fp = fopen(log_time_file, "a");
+            fprintf(fp, "%lf\n", endtime - starttime);
+            fclose(fp);
+        }
     }
-    MPI_Finalize();
     return 0;
 }
