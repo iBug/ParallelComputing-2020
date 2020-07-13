@@ -14,7 +14,7 @@
 
 ## 算法设计与分析
 
-算法本身没有太多可以设计分析的地方，就是根据给定的规则进行模拟，因此这里的重点是 MPI 并行化。
+算法其实就是 Nagel–Schreckenberg 模型[^1]，本身没有太多可以设计分析的地方，就是根据给定的规则进行模拟，因此这里的重点是 MPI 并行化。
 
 首先在任务分配上，为了减少进程间通信的需求，尽可能将连续的车辆交给同一个进程处理，实际实现就是从 0 号车开始，每 $n/size$ 辆分配给一个进程，这样只有相邻两个进程每轮循环后需要传输一辆车的速度信息用于更新间距。
 
@@ -151,4 +151,7 @@ ubuntu@iBug-Server:~/proj/PC-2020/lab2$
 
 ## 分析与总结
 
-与实验 1 中的两个 MPI 程序一样，在本次实验中学会了 `MPI_Send`，`MPI_Recv`，`MPI_Gather` 和 `MPI_Gatherv`，没有别的好总结的。
+与实验 1 中的两个 MPI 程序一样，在本次实验中学会了 `MPI_Send`，`MPI_Recv`，`MPI_Gather` 和 `MPI_Gatherv`，另外还学会了在 MPI 中创建和传输结构体[^2]，这在实验 3 中也派上了用场。
+
+[^1]: https://en.wikipedia.org/wiki/Nagel%E2%80%93Schreckenberg_model
+[^2]: https://stackoverflow.com/a/9865041/5958455
