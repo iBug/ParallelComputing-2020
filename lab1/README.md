@@ -136,9 +136,23 @@ total /= n;
 
 OpenMP 程序通过指定环境变量 `OMP_NUM_THREADS` 来控制线程数，MPI  程序通过指定 `-np` 参数来控制进程数。所有 OpenMP 程序均为单进程，所有 MPI 程序每进程均为单线程。
 
-OpenMP 程序使用 `omp_get_wtime()`，MPI 程序使用 `MPI_Wtime()` 获取时间，两种程序均采用两次获取时间作差作为算法运行时间输出。所有数值均为多次运行去掉部分最高最低结果后剩余结果的平均值（见代码 `reporttime.pl`）。
+OpenMP 程序使用 `omp_get_wtime()`，MPI 程序使用 `MPI_Wtime()` 获取时间，两种程序均采用两次获取时间作差作为算法运行时间输出，获取时间的位置是输入完成后和输出开始前，这样测得的时间能更好的反映算法本身的运行时间。所有数值均为多次运行去掉部分最高最低结果后剩余结果的平均值（见代码 `reporttime.pl`）。
 
 ### 1. 求素数个数 (OpenMP)
+
+运行结果
+
+```text
+ubuntu@iBug-Server:~/proj/PC-2020/lab1$ ./1-openmp <<< 1000
+168
+ubuntu@iBug-Server:~/proj/PC-2020/lab1$ ./1-openmp <<< 10000
+1229
+ubuntu@iBug-Server:~/proj/PC-2020/lab1$ ./1-openmp <<< 100000
+9592
+ubuntu@iBug-Server:~/proj/PC-2020/lab1$ ./1-openmp <<< 500000
+41538
+ubuntu@iBug-Server:~/proj/PC-2020/lab1$
+```
 
 运行时间（ms）
 
@@ -164,6 +178,20 @@ OpenMP 程序使用 `omp_get_wtime()`，MPI 程序使用 `MPI_Wtime()` 获取时
 
 ### 2. 求素数个数 (MPI)
 
+运行结果
+
+```text
+ubuntu@iBug-Server:~/proj/PC-2020/lab1$ mpirun -np 6 1-mpi <<< 1000
+168
+ubuntu@iBug-Server:~/proj/PC-2020/lab1$ mpirun -np 6 1-mpi <<< 10000
+1229
+ubuntu@iBug-Server:~/proj/PC-2020/lab1$ mpirun -np 6 1-mpi <<< 100000
+9592
+ubuntu@iBug-Server:~/proj/PC-2020/lab1$ mpirun -np 6 1-mpi <<< 500000
+41538
+ubuntu@iBug-Server:~/proj/PC-2020/lab1$
+```
+
 运行时间（ms）
 
 | 规模 \\ 进程数 |  1   |  2   |  4   |  8   |
@@ -188,6 +216,20 @@ OpenMP 程序使用 `omp_get_wtime()`，MPI 程序使用 `MPI_Wtime()` 获取时
 
 ### 3. 迭代求 π (OpenMP)
 
+运行结果
+
+```text
+ubuntu@iBug-Server:~/proj/PC-2020/lab1$ ./2-openmp <<< 1000
+3.141592736923
+ubuntu@iBug-Server:~/proj/PC-2020/lab1$ ./2-openmp <<< 10000
+3.141592654423
+ubuntu@iBug-Server:~/proj/PC-2020/lab1$ ./2-openmp <<< 50000
+3.141592653623
+ubuntu@iBug-Server:~/proj/PC-2020/lab1$ ./2-openmp <<< 100000
+3.141592653598
+ubuntu@iBug-Server:~/proj/PC-2020/lab1$
+```
+
 运行时间（ms）
 
 | 规模 \\ 进程数 |  1   |  2   |  4   |  8   |
@@ -211,6 +253,20 @@ OpenMP 程序使用 `omp_get_wtime()`，MPI 程序使用 `MPI_Wtime()` 获取时
 |  100,000,000   | 1.0  | 1.98 | 3.04 | 3.80 |
 
 ### 4. 迭代求 π (MPI)
+
+运行结果
+
+```text
+ubuntu@iBug-Server:~/proj/PC-2020/lab1$ mpirun -np 6 2-mpi <<< 1000
+3.141592736757
+ubuntu@iBug-Server:~/proj/PC-2020/lab1$ mpirun -np 6 2-mpi <<< 10000
+3.141592654423
+ubuntu@iBug-Server:~/proj/PC-2020/lab1$ mpirun -np 6 2-mpi <<< 50000
+3.141592653623
+ubuntu@iBug-Server:~/proj/PC-2020/lab1$ mpirun -np 6 2-mpi <<< 100000
+3.141592653598
+ubuntu@iBug-Server:~/proj/PC-2020/lab1$
+```
 
 运行时间（ms）
 

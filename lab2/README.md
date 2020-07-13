@@ -104,9 +104,36 @@ MPI_Gatherv(car, this_size, MPI_Car, cars, recvcounts, displs, MPI_Car, 0, MPI_C
 
 ## 实验结果
 
-运行时间的测量方式与实验 1 中的两个 MPI 程序一致，此处不再重复。
+### 运行结果
+
+```text
+ubuntu@iBug-Server:~/proj/PC-2020/lab2$ mpirun -np 6 main <<< '20 20'
+Car   0: Speed =  17
+Car   1: Speed =  14, Distance =  29
+Car   2: Speed =  13, Distance =  15
+Car   3: Speed =  12, Distance =  17
+Car   4: Speed =  12, Distance =  27
+Car   5: Speed =  10, Distance =  23
+Car   6: Speed =   7, Distance =  18
+Car   7: Speed =   5, Distance =  10
+Car   8: Speed =   4, Distance =   6
+Car   9: Speed =   6, Distance =   9
+Car  10: Speed =   5, Distance =   7
+Car  11: Speed =   4, Distance =   6
+Car  12: Speed =   2, Distance =  10
+Car  13: Speed =   1, Distance =   4
+Car  14: Speed =   1, Distance =   2
+Car  15: Speed =   0, Distance =   2
+Car  16: Speed =   0, Distance =   2
+Car  17: Speed =   0, Distance =   1
+Car  18: Speed =   0, Distance =   1
+Car  19: Speed =   0, Distance =   1
+ubuntu@iBug-Server:~/proj/PC-2020/lab2$
+```
 
 ### 运行时间（ms）
+
+运行时间的测量方式与实验 1 中的两个 MPI 程序一致，此处不再重复。
 
 | 规模 \\ 进程数  |  1   |  2   |  4   |  8   |
 | :-------------: | :--: | :--: | :--: | :--: |
