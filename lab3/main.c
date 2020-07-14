@@ -52,6 +52,16 @@ int main(int argc, char **argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
+    // Construct datatype
+    MPI_Datatype MPI_Pos;
+    {
+        int blocklengths[2] = {1, 1};
+        MPI_Aint offsets[2] = {offsetof(Pos, x), offsetof(Pos, y)};
+        MPI_Datatype types[2] = {MPI_DOUBLE, MPI_DOUBLE};
+        MPI_Type_create_struct(2, blocklengths, offsets, types, &MPI_Pos);
+        MPI_Type_commit(&MPI_Pos);
+    }
+
     if (rank == 0) {
         scanf(" %d", &n);
         scanf(" %lf", &duration);
@@ -66,6 +76,7 @@ int main(int argc, char **argv) {
             n = 0;
         }
     }
+    const double starttime = MPI_Wtime();
     MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
     if (n == 0) {
         MPI_Abort(MPI_COMM_WORLD, 1);
@@ -83,16 +94,6 @@ int main(int argc, char **argv) {
     }
     const int this_start = displs[rank];
     const int this_size = recvcounts[rank];
-
-    // Construct datatype
-    MPI_Datatype MPI_Pos;
-    {
-        int blocklengths[2] = {1, 1};
-        MPI_Aint offsets[2] = {offsetof(Pos, x), offsetof(Pos, y)};
-        MPI_Datatype types[2] = {MPI_DOUBLE, MPI_DOUBLE};
-        MPI_Type_create_struct(2, blocklengths, offsets, types, &MPI_Pos);
-        MPI_Type_commit(&MPI_Pos);
-    }
 
     // Initialize data
     Pos *pos = malloc(n * sizeof(Pos));
@@ -123,12 +124,19 @@ int main(int argc, char **argv) {
     }
 
     // Results already collected from allgatherv, so cleanup only
+    const double endtime = MPI_Wtime();
     MPI_Type_free(&MPI_Pos);
     MPI_Finalize();
 
     if (rank == 0) {
         for (int i = 0; i < n; i++) {
             printf("Object %3d: (%.8lf, %.8lf)\n", i + 1, pos[i].x, pos[i].y);
+        }
+        const char *log_time_file = getenv("LOG_TIME_FILE");
+        if (log_time_file != NULL) {
+            FILE *fp = fopen(log_time_file, "a");
+            fprintf(fp, "%lf\n", endtime - starttime);
+            fclose(fp);
         }
     }
     free(pos);
