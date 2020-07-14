@@ -152,6 +152,7 @@ int main(int argc, char **argv) {
         }
         root_samples = malloc(mpi_size * mpi_size * sizeof(int));
     }
+    const double starttime = MPI_Wtime();
     MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     // Prepare parameters
@@ -246,6 +247,7 @@ int main(int argc, char **argv) {
     free(class_sizes);
     free(this_data);
 
+    const double endtime = MPI_Wtime();
     MPI_Finalize();
 
     if (mpi_rank == 0) {
@@ -255,6 +257,13 @@ int main(int argc, char **argv) {
         free(root_data);
         free(block_sizes);
         free(displs);
+
+        const char *log_time_file = getenv("LOG_TIME_FILE");
+        if (log_time_file != NULL) {
+            FILE *fp = fopen(log_time_file, "a");
+            fprintf(fp, "%lf\n", endtime - starttime);
+            fclose(fp);
+        }
     }
     return 0;
 }
