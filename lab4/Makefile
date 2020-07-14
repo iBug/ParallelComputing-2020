@@ -1,15 +1,18 @@
 CC := gcc
 MPICC := mpicc
 CFLAGS := -O2 -Wall -Wno-unused-result
-LDFLAGS := -lm
-EXES := main
+LDFLAGS :=
+EXES := main qsort
 
 .PHONY: all clean
 
 all: $(EXES)
 
-$(EXES): %: %.c
+main: main.c
 	${MPICC} ${CFLAGS} -o $@ $^ ${LDFLAGS}
 
+qsort: qsort.c
+	${CC} ${CFLAGS} -fopenmp -o $@ $^ ${LDFLAGS}
+
 clean:
-	rm -f $(EXES)
+	rm -f $(EXES) *.o

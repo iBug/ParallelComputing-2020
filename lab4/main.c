@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 #include <mpi.h>
 
 #define HLEFT(index) (2 * (index) + 1)

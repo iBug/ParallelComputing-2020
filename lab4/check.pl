@@ -7,7 +7,8 @@ my $last = -1;
 
 while (<>) {
     chomp;
-    say 'OK' and last if /^$/;
+    last if /^$/;
     die "Wrong value ($last > $_) at line $.\n" if $last > $_;
     $last = $_;
 }
+say 'OK';
