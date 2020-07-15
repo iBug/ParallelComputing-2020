@@ -82,18 +82,12 @@ int main(int argc, char **argv) {
         }
 
         // Communicate
-        if (rank == 0) {
+        if (rank != size - 1) {
             MPI_Send(&car[this_size - 1].v, 1, MPI_INT, rank + 1, rank, MPI_COMM_WORLD);
-        } else {
+        }
+        if (rank != 0) {
             int that_v; // car[-1].v
-            MPI_Status status;
-            if (rank == size - 1) {
-                MPI_Recv(&that_v, 1, MPI_INT, rank - 1, rank - 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            } else {
-                MPI_Sendrecv(&car[this_size - 1].v, 1, MPI_INT, rank + 1, rank,
-                             &that_v, 1, MPI_INT, rank - 1, rank - 1,
-                             MPI_COMM_WORLD, &status);
-            }
+            MPI_Recv(&that_v, 1, MPI_INT, rank - 1, rank - 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             car[0].d += that_v - car[0].v;
         }
     }
