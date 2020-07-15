@@ -72,8 +72,7 @@ for (int round = 0; round < rounds; round++) {
     }
     if (rank != 0) {
         int that_v; // car[-1].v
-        MPI_Status status;
-        MPI_Recv(&that_v, 1, MPI_INT, rank - 1, rank - 1, MPI_COMM_WORLD, &status);
+        MPI_Recv(&that_v, 1, MPI_INT, rank - 1, rank - 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         car[0].d += that_v - car[0].v;
     }
 }
@@ -151,7 +150,9 @@ ubuntu@iBug-Server:~/proj/PC-2020/lab2$
 
 ## 分析与总结
 
-与实验 1 中的两个 MPI 程序一样，在本次实验中学会了 `MPI_Send`，`MPI_Recv`，`MPI_Gather` 和 `MPI_Gatherv`，另外还学会了在 MPI 中创建和传输结构体[^2]，这在实验 3 中也派上了用场。
+与实验 1 中的两个 MPI 程序一样，在本次实验中学会了 `MPI_Send`，`MPI_Recv`，`MPI_Sendrecv`，`MPI_Gather` 和 `MPI_Gatherv`，另外还学会了在 MPI 中创建和传输结构体[^2]，这在实验 3 中也派上了用场。
+
+另外在每个进程向下一个进程发送车速的那部分，我尝试了 `MPI_Sendrecv`，但是测试时发现该函数会让总时间增加超过 60%，慢得离谱，所以还是换回了 `MPI_Send` + `MPI_Recv` 的组合。
 
 [^1]: https://en.wikipedia.org/wiki/Nagel%E2%80%93Schreckenberg_model
 [^2]: https://stackoverflow.com/a/9865041/5958455
