@@ -112,9 +112,9 @@ int main(int argc, char **argv) {
     while (runtime < duration) {
         for (int i = 0; i < this_size; i++) {
             compute_force(pos, n, this_start + i, &force);
-            compute_velocity(&vel[i], &force);
         }
         for (int i = 0; i < this_size; i++) {
+            compute_velocity(&vel[i], &force);
             compute_position(&pos[this_start + i], &vel[i]);
         }
         runtime += FRAME;
